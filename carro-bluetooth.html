@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@alokilate.dev - Carro Bluetooth</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            margin: 0;
+        }
+        .project {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        pre {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .code-explanation {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+            margin-top: 10px;
+            border-radius: 0 5px 5px 0;
+        }
+        .command {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>@alokilate.dev</h1>
+        <p>Proyectos de electrónica y programación</p>
+    </header>
+
+    <section class="project">
+        <h2>Carro Controlado por Bluetooth con Arduino</h2>
+        <p>Este proyecto permite controlar un carrito con tu teléfono usando Bluetooth.</p>
+        
+        <h3>Código Arduino:</h3>
+        <pre>
+#include &lt;SoftwareSerial.h&gt;  // Esto es como un walkie-talkie para hablar con el Bluetooth
+#include &lt;Servo.h&gt;         // Esto es para controlar motores (como los músculos del carro)
+
+// CONEXIONES PARA EL BLUETOOTH.
+int bluetoothTx = 2;  // El cable TX del Bluetooth va al pin 2 (para enviar mensajes)
+int bluetoothRx = 3;  // El cable RX del Bluetooth va al pin 3 (para recibir mensajes)
+
+SoftwareSerial bluetooth(bluetoothTx, bluetoothRx);  // Creamos nuestro walkie-talkie Bluetooth
+
+// MOTOR 1 (rueditas de un lado)
+int Motor1A = 5;  // Cable rojo del motor 1
+int Motor1B = 6;  // Cable negro del motor 1
+
+// MOTOR 2 (rueditas del otro lado)
+int Motor2A = 9;  // Cable rojo del motor 2
+int Motor2B = 10; // Cable negro del motor 2
+
+void setup() {  // Esto se hace solo una vez cuando encendemos el carro
+  bluetooth.begin(115200);  // Encendemos el Bluetooth rápido primero
+  bluetooth.print("$$$");   // Le decimos "ábrete sésamo" para configurarlo
+  delay(100);               // Esperamos un poquito (como contar hasta 1)
+  bluetooth.println("U,9600,N");  // Le decimos que hable más lento para entendernos mejor
+  bluetooth.begin(9600);    // Ahora hablamos más despacio
+  
+  // Preparamos los pines de los motores para enviar electricidad
+  pinMode(Motor1A, OUTPUT);
+  pinMode(Motor2A, OUTPUT);
+  pinMode(Motor1B, OUTPUT);
+  pinMode(Motor2B, OUTPUT);
+  
+  // Apagamos todos los motores al inicio
+  digitalWrite(Motor1A, LOW);
+  digitalWrite(Motor2A, LOW);
+  digitalWrite(Motor1B, LOW);
+  digitalWrite(Motor2B, LOW);
+}
+
+int flag1 = -1;  // Bandera para saber si vamos adelante o atrás
+int flag2 = -1;  // Bandera para saber si giramos izquierda o derecha
+
+void loop() {  // Esto se repite una y otra vez como un hamster en su rueda
+  if(bluetooth.available()) {  // Si el Bluetooth nos está hablando...
+    char toSend = (char)bluetooth.read();  // Escuchamos lo que dice
+    
+    if(toSend == 'S') {  // Si nos dice 'S' (Stop)
+      flag1 = 0;  // Nos detenemos
+      flag2 = 0;
+      // Apagamos todos los motores
+      digitalWrite(Motor1A, LOW);
+      analogWrite(Motor1B, LOW);
+      digitalWrite(Motor2A, LOW);
+      analogWrite(Motor2B, LOW);
+    }
+    
+    if(toSend == 'F' || toSend == 'G' || toSend == 'I') {  // Si nos dice 'F' (Forward)
+      if(flag1 != 1) {  // Y si no estábamos ya yendo adelante
+        // Hacemos que el carrito vaya para adelante
+        flag1 = 1;
+        digitalWrite(Motor1A, HIGH);  // Encendemos motor 1 hacia adelante
+        analogWrite(Motor1B, 0);
+        digitalWrite(Motor2A, HIGH);  // Encendemos motor 2 hacia adelante
+        analogWrite(Motor2B, 0);
+      }
+    }
+    
+    if(toSend == 'B' || toSend == 'H' || toSend == 'J') {  // Si nos dice 'B' (Back)
+      if(flag1 != 2) {  // Y si no estábamos ya yendo atrás
+        // Hacemos que el carrito vaya en reversa
+        flag1 = 2;
+        digitalWrite(Motor1B, HIGH);  // Encendemos motor 1 hacia atrás
+        analogWrite(Motor1A, 0);
+        digitalWrite(Motor2B, HIGH);  // Encendemos motor 2 hacia atrás
+        analogWrite(Motor2A, 0);
+      }
+    }
+    
+    if(toSend == 'L' || toSend == 'G' || toSend == 'H') {  // Si nos dice 'L' (Left)
+      if(flag2 != 1) {  // Y si no estábamos ya girando izquierda
+        // Hacemos que el carrito gire a la izquierda
+        flag2 = 1;
+        digitalWrite(Motor2B, HIGH);  // Motor 2 va atrás
+        analogWrite(Motor2A, 0);
+        digitalWrite(Motor1A, HIGH);  // Motor 1 va adelante
+        analogWrite(Motor1B, 0);
+      }
+    }
+    else if(toSend == 'R' || toSend == 'I' || toSend == 'J') {  // Si nos dice 'R' (Right)
+      if(flag2 != 2) {  // Y si no estábamos ya girando derecha
+        // Hacemos que el carrito gire a la derecha
+        flag2 = 2;
+        digitalWrite(Motor1B, HIGH);  // Motor 1 va atrás
+        analogWrite(Motor1A, 0);
+        digitalWrite(Motor2A, HIGH);  // Motor 2 va adelante
+        analogWrite(Motor2B, 0);
+      }
+    }
+    else {
+      if(flag2 != 3) {
+        flag2 = 3;
+        // Apagamos los motores de giro
+        digitalWrite(Motor2A, LOW);
+        analogWrite(Motor2B, LOW);  
+        digitalWrite(Motor2B, LOW);
+        analogWrite(Motor2A, LOW);  
+      }
+    }
+  }
+}</pre>
+
+        <div class="code-explanation">
+            <h3>¿Cómo funciona el carrito?</h3>
+            <p>El carrito entiende estas letras que le envías por Bluetooth:</p>
+            <ul>
+                <li><span class="command">'S'</span> - STOP (detenerse)</li>
+                <li><span class="command">'F'</span> - FORWARD (adelante)</li>
+                <li><span class="command">'B'</span> - BACKWARD (atrás)</li>
+                <li><span class="command">'L'</span> - LEFT (izquierda)</li>
+                <li><span class="command">'R'</span> - RIGHT (derecha)</li>
+            </ul>
+            <p>Cuando el Bluetooth recibe una letra, enciende o apaga los motores para que el carrito haga lo que le pides.</p>
+        </div>
+    </section>
+</body>
+</html>
